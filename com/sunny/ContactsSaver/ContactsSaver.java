@@ -1,7 +1,6 @@
 package com.sunny.ContactsSaver;
 import android.app.Activity;
 import android.content.*;
-import android.database.Cursor;
 import android.net.Uri;
 import android.provider.ContactsContract;
 import com.google.appinventor.components.annotations.*;
@@ -11,7 +10,8 @@ import com.google.appinventor.components.runtime.util.AsynchUtil;
 import com.google.appinventor.components.runtime.util.YailDictionary;
 
 @DesignerComponent(version = 1,
-        description = "Add contacts without using activity starter<br>Developed by <a href=https://sunnythedeveloper.epizy.com>Sunny Gupta</a>",
+        versionName = "1.1",
+        description = "Save/Update/Delete contacts without using activity starter<br>Developed by <a href=https://sunnythedeveloper.xyz>Sunny Gupta</a>",
         nonVisible = true,
         iconName = "https://res.cloudinary.com/andromedaviewflyvipul/image/upload/c_scale,h_20,w_20/v1571472765/ktvu4bapylsvnykoyhdm.png",
         category = ComponentCategory.EXTENSION)
@@ -37,15 +37,15 @@ public class ContactsSaver extends AndroidNonvisibleComponent{
                     }
                     Uri rawContactUri = context.getContentResolver().insert(ContactsContract.RawContacts.CONTENT_URI, value);
                     long rawContactId = ContentUris.parseId(rawContactUri);
-                    postResult(true, String.valueOf(rawContactId));
+                    postCreateResult(true, String.valueOf(rawContactId));
                 }catch (Exception e){
                     e.printStackTrace();
-                    postResult(false,e.getMessage()!=null?e.getMessage():e.toString());
+                    postCreateResult(false,e.getMessage()!=null?e.getMessage():e.toString());
                 }
             }
         });
     }
-    public void postResult(final boolean successful,final String result){
+    private void postCreateResult(final boolean successful, final String result){
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -53,22 +53,25 @@ public class ContactsSaver extends AndroidNonvisibleComponent{
             }
         });
     }
-    /*@SimpleFunction(description = "Gets rawContactId from phone number")
-    public String GetRawContactId(String phoneNumber){
+    /*
+    @SimpleFunction(description = "Gets contact id from raw contact id")
+    public String GetContactId(String rawContactId){
     	ContentResolver contentResolver = context.getContentResolver();
-    	Uri uri = ContactsContract.CommonDataKinds.Phone.CONTENT_FILTER_URI;
-    	String[] projection = new String[]{ContactsContract.CommonDataKinds.Phone.RAW_CONTACT_ID, 
-    										ContactsContract.CommonDataKinds.Phone.NUMBER}
+    	Uri uri = ContactsContract.RawContacts.CONTENT_URI;
+    	String[] projection = new String[]{ContactsContract.RawContacts.CONTACT_ID};
         Cursor cursor = contentResolver.query(
                 uri,
                 projection,
-                ContactsContract.CommonDataKinds.Phone.NUMBER + "=?",
-                new String[]{phoneNumber},
+                ContactsContract.RawContacts._ID + "=?",
+                new String[]{rawContactId},
                 null
         );
-        cursor.moveToFirst();
-        return cursor.getString(cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.RAW_CONTACT_ID));
-    }*/
+        if (cursor != null && cursor.moveToFirst()){
+            return cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.CONTACT_ID));
+        }
+        return "";
+    }
+     */
     @SimpleFunction(description = "Adds data to given contact")
     public void AddData(final String mimeType,final YailDictionary values,final String rawContactId){
         AsynchUtil.runAsynchronously(new Runnable() {
@@ -82,15 +85,16 @@ public class ContactsSaver extends AndroidNonvisibleComponent{
                     value.put(ContactsContract.Data.RAW_CONTACT_ID,rawContactId);
                     value.put(ContactsContract.Data.MIMETYPE,mimeType);
                     context.getContentResolver().insert(ContactsContract.Data.CONTENT_URI, value);
-                    postResult(true);
+                    postAddResult(true);
                 }catch (Exception e){
                     e.printStackTrace();
-                    postResult(false);
+                    postError(e.getMessage());
+                    postAddResult(false);
                 }
             }
         });
     }
-    public void postResult(final boolean successful){
+    private void postAddResult(final boolean successful){
         activity.runOnUiThread(new Runnable() {
             @Override
             public void run() {
@@ -102,8 +106,92 @@ public class ContactsSaver extends AndroidNonvisibleComponent{
     public void ContactCreated(boolean successful,String result){
         EventDispatcher.dispatchEvent(this,"ContactCreated",successful,result);
     }
-    @SimpleEvent(description = "Event raised after 'AddData' method")
+    @SimpleEvent(description = "Event raised after 'AddData' method and returns result")
     public void DataAdded(boolean successful){
         EventDispatcher.dispatchEvent(this,"DataAdded",successful);
+    }
+    @SimpleFunction(description = "Updates data in given contact")
+    public void UpdateData(final String mimeType,final YailDictionary values,final String rawContactId){
+        AsynchUtil.runAsynchronously(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    ContentValues value = new ContentValues();
+                    for (Object k : values.keySet()) {
+                        value.put(k.toString(), values.get(k).toString());
+                    }
+                    context.getContentResolver().update(ContactsContract.Data.CONTENT_URI,
+                            value,
+                            ContactsContract.Data.RAW_CONTACT_ID + "=" + rawContactId
+                            + " and " + ContactsContract.Data.MIMETYPE + "=" + mimeType,
+                            null);
+                    postUpdateResult(true);
+                }catch (Exception e){
+                    e.printStackTrace();
+                    postError(e.getMessage());
+                    postUpdateResult(false);
+                }
+            }
+        });
+    }
+    private void postUpdateResult(final boolean successful){
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DataUpdated(successful);
+            }
+        });
+    }
+    @SimpleEvent(description = "Event raised after 'UpdateData' method and returns result")
+    public void DataUpdated(boolean successful){
+        EventDispatcher.dispatchEvent(this,"DataUpdated",successful);
+    }
+    @SimpleFunction(description = "Deletes given contact")
+    public void DeleteContact(final String rawContactId){
+        AsynchUtil.runAsynchronously(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    context.getContentResolver().delete(ContactsContract.Data.CONTENT_URI,
+                            ContactsContract.Data.RAW_CONTACT_ID + "=" + rawContactId,
+                            null);
+                    context.getContentResolver().delete(ContactsContract.RawContacts.CONTENT_URI,
+                            ContactsContract.RawContacts._ID + "=" + rawContactId,
+                            null);
+                    context.getContentResolver().delete(ContactsContract.Contacts.CONTENT_URI,
+                            ContactsContract.Contacts._ID + "=" + rawContactId,
+                            null);
+                    postDeleteResult(true);
+                }catch (Exception e){
+                    e.printStackTrace();
+                    postError(e.getMessage());
+                    postDeleteResult(false);
+                }
+            }
+        });
+    }
+    private void postDeleteResult(final boolean successful){
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                ContactDeleted(successful);
+            }
+        });
+    }
+    @SimpleEvent(description = "Event raised after 'DeleteContact' method and returns result")
+    public void ContactDeleted(boolean successful){
+        EventDispatcher.dispatchEvent(this,"ContactDeleted",successful);
+    }
+    private void postError(final String e){
+        activity.runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                GotError(e);
+            }
+        });
+    }
+    @SimpleEvent()
+    public void GotError(String errorMessage){
+        EventDispatcher.dispatchEvent(this,"GotError",errorMessage);
     }
 }
