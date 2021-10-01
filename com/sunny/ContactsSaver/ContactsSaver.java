@@ -1,6 +1,7 @@
 package com.sunny.ContactsSaver;
 import android.app.Activity;
 import android.content.*;
+import android.database.Cursor;
 import android.net.Uri;
 import android.provider.ContactsContract;
 import com.google.appinventor.components.annotations.*;
@@ -53,25 +54,23 @@ public class ContactsSaver extends AndroidNonvisibleComponent{
             }
         });
     }
-    /*
-    @SimpleFunction(description = "Gets contact id from raw contact id")
-    public String GetContactId(String rawContactId){
+    @SimpleFunction(description = "Get raw contact id from phone number")
+    public String GetRawContactId(String phoneNumber){
     	ContentResolver contentResolver = context.getContentResolver();
-    	Uri uri = ContactsContract.RawContacts.CONTENT_URI;
-    	String[] projection = new String[]{ContactsContract.RawContacts.CONTACT_ID};
+        Uri uri = Uri.withAppendedPath(ContactsContract.PhoneLookup.CONTENT_FILTER_URI, Uri.encode(phoneNumber));
+    	String[] projection = new String[]{ContactsContract.PhoneLookup._ID};
         Cursor cursor = contentResolver.query(
                 uri,
                 projection,
-                ContactsContract.RawContacts._ID + "=?",
-                new String[]{rawContactId},
+                null,
+                null,
                 null
         );
         if (cursor != null && cursor.moveToFirst()){
-            return cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.CONTACT_ID));
+            return cursor.getString(cursor.getColumnIndex(ContactsContract.PhoneLookup._ID));
         }
         return "";
     }
-     */
     @SimpleFunction(description = "Adds data to given contact")
     public void AddData(final String mimeType,final YailDictionary values,final String rawContactId){
         AsynchUtil.runAsynchronously(new Runnable() {
