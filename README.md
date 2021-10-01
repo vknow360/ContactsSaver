@@ -1,5 +1,5 @@
 # ContactsSaver
-Add contacts without using activity starter (For MIT AI2 and its distros)
+Save/Update/Delete contacts without using activity starter
 ### How to use
 #### Create an empty contact 
 <img src="https://community.appinventor.mit.edu/uploads/default/original/3X/a/8/a84e05857444d1d22e7e4612d88006e9b249ac32.png"><br>
